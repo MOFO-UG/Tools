@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Location & Device Info</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --bg:#0f1220;
+  --card:#171a2e;
+  --accent:#6c8cff;
+  --text:#eaeaff;
+  --muted:#9aa0ff;
+}
+
+*{
+  box-sizing:border-box;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  background:radial-gradient(circle at top, #1a1f4a, var(--bg));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--text);
+}
+
+.container{
+  width:100%;
+  max-width:540px;
+  background:var(--card);
+  border-radius:18px;
+  padding:26px;
+  box-shadow:0 25px 60px rgba(0,0,0,0.5);
+}
+
+h1{
+  margin:0 0 8px;
+  text-align:center;
+}
+
+.disclaimer{
+  font-size:0.8rem;
+  color:var(--muted);
+  text-align:center;
+  margin-bottom:18px;
+}
+
+button{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),#8fa5ff);
+  color:#000;
+  font-weight:600;
+  cursor:pointer;
+  margin-top:12px;
+}
+
+.results{
+  margin-top:20px;
+  background:#0b0e23;
+  padding:16px;
+  border-radius:12px;
+  display:none;
+}
+
+.label{
+  font-size:0.8rem;
+  color:var(--muted);
+}
+
+.value{
+  margin-bottom:10px;
+  word-break:break-all;
+}
+
+.download{
+  background:#22c55e;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>📍 Location & Device Info</h1>
+
+  <div class="disclaimer">
+    This website collects device, browser, ISP and location data
+    <b>only with your permission</b>.  
+    All information is downloaded locally as a JSON file.
+  </div>
+
+  <button onclick="getLocation()">Detect My Location</button>
+  <button class="download" onclick="downloadJSON()">Download JSON</button>
+
+  <div class="results" id="resultsBox">
+    <div class="label">Latitude</div>
+    <div class="value" id="lat"></div>
+
+    <div class="label">Longitude</div>
+    <div class="value" id="lon"></div>
+
+    <div class="label">Accuracy (meters)</div>
+    <div class="value" id="acc"></div>
+  </div>
+</div>
+
+<script>
+let locationData = null;
+
+function detectBrandFromUA(ua){
+  if (/SM-|Samsung/i.test(ua)) return "Samsung";
+  if (/Redmi|Mi |Xiaomi/i.test(ua)) return "Xiaomi";
+  if (/Vivo/i.test(ua)) return "Vivo";
+  if (/OPPO|CPH/i.test(ua)) return "Oppo";
+  if (/Realme/i.test(ua)) return "Realme";
+  if (/OnePlus/i.test(ua)) return "OnePlus";
+  if (/Pixel/i.test(ua)) return "Google Pixel";
+  if (/iPhone|iPad/i.test(ua)) return "Apple";
+  return "Unknown / Not Exposed";
+}
+
+async function getISP(){
+  try{
+    const r = await fetch("https://ipapi.co/json/");
+    const j = await r.json();
+    return j.org || "Unknown";
+  }catch{
+    return "Unavailable";
+  }
+}
+
+function getLocation(){
+  if(!navigator.geolocation){
+    alert("Geolocation not supported");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(pos=>{
+    locationData = {
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      accuracyMeters: pos.coords.accuracy
+    };
+
+    document.getElementById("resultsBox").style.display="block";
+    document.getElementById("lat").innerText = locationData.latitude;
+    document.getElementById("lon").innerText = locationData.longitude;
+    document.getElementById("acc").innerText = locationData.accuracyMeters;
+  },
+  ()=>alert("Permission denied"),
+  {enableHighAccuracy:true});
+}
+
+async function downloadJSON(){
+
+  const ua = navigator.userAgent;
+
+  const data = {
+    userAgent: ua,
+    environment:{
+      language: navigator.language,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    },
+    device:{
+      type: /Mobi|Android/i.test(ua) ? "Mobile" : "Desktop",
+      brand: detectBrandFromUA(ua),
+      os: /Android/i.test(ua) ? "Android" :
+          /iPhone|iPad/i.test(ua) ? "iOS" : "Unknown",
+      reportedOSVersion:
+        ua.match(/Android\s([\d\.]+)/)?.[1] ||
+        ua.match(/OS\s([\d_]+)/)?.[1]?.replace(/_/g,".") ||
+        "Unknown"
+    },
+    browser:{
+      name:
+        /Chrome/i.test(ua)&&!/Edg/i.test(ua)?"Chrome":
+        /Edg/i.test(ua)?"Edge":
+        /Firefox/i.test(ua)?"Firefox":
+        /Safari/i.test(ua)&&!/Chrome/i.test(ua)?"Safari":"Unknown",
+      version:
+        ua.match(/Chrome\/([\d\.]+)/)?.[1] ||
+        ua.match(/Edg\/([\d\.]+)/)?.[1] ||
+        ua.match(/Firefox\/([\d\.]+)/)?.[1] ||
+        ua.match(/Version\/([\d\.]+)/)?.[1] ||
+        "Unknown"
+    },
+    battery: navigator.getBattery
+      ? await navigator.getBattery().then(b=>({
+          charging:b.charging,
+          levelPercent:Math.round(b.level*100)
+        }))
+      : "Not supported",
+    isp: await getISP(),
+    location: locationData || "Not granted"
+  };
+
+  const blob = new Blob(
+    [JSON.stringify(data,null,4)],
+    {type:"application/json"}
+  );
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "device_location_info.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
+
+</body>
+</html>

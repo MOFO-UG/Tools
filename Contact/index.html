@@ -1,47 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Contact</title>
+<meta charset="UTF-8">
+<title>Contact</title>
+
+<style>
+body {
+  background: linear-gradient(135deg, #141e30, #243b55);
+  font-family: system-ui, sans-serif;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+form {
+  background: #0b0f14;
+  padding: 30px;
+  width: 380px;
+  border-radius: 14px;
+  box-shadow: 0 0 40px rgba(0,0,0,0.6);
+}
+
+input, textarea, button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  font-size: 14px;
+}
+
+button {
+  background: #00e0ff;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#error {
+  color: #ff6b6b;
+  margin-top: 10px;
+}
+</style>
 </head>
+
 <body>
 
 <form id="contactForm">
-  <input name="name" placeholder="Name" required><br><br>
-  <input name="email" type="email" placeholder="Email" required><br><br>
-  <textarea name="message" placeholder="Message" required></textarea><br><br>
-  <button type="submit">Send</button>
+  <h2>Contact Us</h2>
+
+  <input name="name" placeholder="Full Name" required>
+  <input name="email" type="email" placeholder="Email" required>
+  <input name="phone" placeholder="Phone Number" required>
+  <input name="age" type="number" placeholder="Age" min="1" required>
+  <textarea name="message" placeholder="Message" required></textarea>
+
+  <button type="submit">Submit</button>
+  <div id="error"></div>
 </form>
 
 <script>
-const GITHUB_TOKEN = "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"; // 🚨 exposed
 const OWNER = "MOFO-UG";
 const REPO = "ControlTheWorld";
 
-document.getElementById("contactForm").onsubmit = async (e) => {
+document.getElementById("contactForm").onsubmit = (e) => {
   e.preventDefault();
 
-  const data = {
-    title: `Contact from ${e.target.name.value}`,
-    body: `
-Name: ${e.target.name.value}
-Email: ${e.target.email.value}
+  const f = e.target;
+  const error = document.getElementById("error");
+  error.textContent = "";
+
+  try {
+    const title = encodeURIComponent(`Contact: ${f.name.value}`);
+
+    const body = encodeURIComponent(
+`Name: ${f.name.value}
+Email: ${f.email.value}
+Phone: ${f.phone.value}
+Age: ${f.age.value}
 
 Message:
-${e.target.message.value}
-`
-  };
+${f.message.value}`
+    );
 
-  await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/issues`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${GITHUB_TOKEN}`,
-      "Accept": "application/vnd.github+json"
-    },
-    body: JSON.stringify(data)
-  });
+    const url = `https://github.com/${OWNER}/${REPO}/issues/new?title=${title}&body=${body}`;
 
-  alert("Submitted");
+    window.open(url, "_blank");
+  } catch (err) {
+    error.textContent = "❌ Could not open GitHub. Please try again.";
+  }
 };
 </script>
 

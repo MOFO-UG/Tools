@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Contact</title>
+</head>
+<body>
+
+<form id="contactForm">
+  <input name="name" placeholder="Name" required><br><br>
+  <input name="email" type="email" placeholder="Email" required><br><br>
+  <textarea name="message" placeholder="Message" required></textarea><br><br>
+  <button type="submit">Send</button>
+</form>
+
+<script>
+const GITHUB_TOKEN = "ghp_XXXXXXXXXXXXXXXXXXXX"; // 🚨 exposed
+const OWNER = "MOFO-UG";
+const REPO = "ControlTheWorld";
+
+document.getElementById("contactForm").onsubmit = async (e) => {
+  e.preventDefault();
+
+  const data = {
+    title: `Contact from ${e.target.name.value}`,
+    body: `
+Name: ${e.target.name.value}
+Email: ${e.target.email.value}
+
+Message:
+${e.target.message.value}
+`
+  };
+
+  await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/issues`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${GITHUB_TOKEN}`,
+      "Accept": "application/vnd.github+json"
+    },
+    body: JSON.stringify(data)
+  });
+
+  alert("Submitted");
+};
+</script>
+
+</body>
+</html>
